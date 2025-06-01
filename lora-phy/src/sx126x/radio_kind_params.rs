@@ -6,6 +6,8 @@ use crate::mod_params::*;
 pub enum PacketType {
     GFSK = 0x00,
     LoRa = 0x01,
+    BPSK = 0x02,
+    MSK = 0x03,
     None = 0x0F,
 }
 
