@@ -13,8 +13,9 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-defmt = { version = "0.3" }
-lora-modulation = { path = "../lora-modulation", version = ">=0.1.2" }
+log = { version = "0.4", optional = true }
+defmt = { version = "0.3", optional = true }
+lora-modulation = { path = "../lora-modulation", version = ">=0.1.2", features = ["defmt"]}
 lorawan-device = { path = "../lorawan-device", version = "0.12", features = [
     "defmt",
 ], optional = true }
@@ -23,5 +24,8 @@ embedded-hal = { version = "1" }
 embedded-hal-async = { version = "1" }
 
 [features]
+default = ["defmt"]
 lorawan-radio = ["dep:lorawan-device"]
+defmt = ["dep:defmt"]
+log = ["dep:log"]
 

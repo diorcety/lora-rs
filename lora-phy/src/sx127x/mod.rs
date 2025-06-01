@@ -4,7 +4,19 @@ pub use sx1272::Sx1272;
 mod sx1276;
 pub use sx1276::Sx1276;
 
-use defmt::debug;
+#[cfg(feature = "defmt")]
+use defmt::{debug, warn};
+#[cfg(feature = "log")]
+use log::{debug, warn};
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! debug {
+    ($($arg:tt)*) => {};
+}
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! warn {
+    ($($arg:tt)*) => {};
+}
+
 use embedded_hal_async::delay::DelayNs;
 use embedded_hal_async::spi::*;
 use radio_kind_params::*;
@@ -229,7 +241,7 @@ where
         _mdltn_params: Option<&ModulationParams>,
         is_tx_prep: bool,
     ) -> Result<(), RadioError> {
-        debug!("tx power = {}", p_out);
+        debug!("tx power = {:?}", p_out);
 
         // Configure tx power and boost
         C::set_tx_power(self, p_out, self.config.tx_boost).await?;
@@ -248,7 +260,7 @@ where
         let bw_val = C::bandwidth_value(mdltn_params.bandwidth)?;
         let coding_rate_denominator_val = coding_rate_denominator_value(mdltn_params.coding_rate)?;
         debug!(
-            "sf = {}, bw = {}, cr_denom = {}",
+            "sf = {:?}, bw = {:?}, cr_denom = {:?}",
             sf_val, bw_val, coding_rate_denominator_val
         );
         // Configure LoRa optimization (0x31) and detection threshold registers (0x37)
@@ -303,7 +315,7 @@ where
     }
 
     async fn set_channel(&mut self, frequency_in_hz: u32) -> Result<(), RadioError> {
-        debug!("channel = {}", frequency_in_hz);
+        debug!("channel = {:?}", frequency_in_hz);
         let frf = (frequency_in_hz as f64 / FREQUENCY_SYNTHESIZER_STEP) as u32;
         self.write_register(Register::RegFrfMsb, ((frf & 0x00FF0000) >> 16) as u8)
             .await?;
@@ -494,27 +506,27 @@ where
         match radio_mode {
             RadioMode::Transmit => {
                 if (irq_flags & IrqMask::TxDone.value()) == IrqMask::TxDone.value() {
-                    debug!("TxDone in radio mode {}", radio_mode);
+                    debug!("TxDone in radio mode {:?}", radio_mode);
                     return Ok(Some(IrqState::Done));
                 }
             }
             RadioMode::Receive(RxMode::Continuous) | RadioMode::Receive(RxMode::Single(_)) => {
                 if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
-                    debug!("RxDone in radio mode {}", radio_mode);
+                    debug!("RxDone in radio mode {:?}", radio_mode);
                     return Ok(Some(IrqState::Done));
                 }
                 if (irq_flags & IrqMask::RxTimeout.value()) == IrqMask::RxTimeout.value() {
-                    debug!("RxTimeout in radio mode {}", radio_mode);
+                    debug!("RxTimeout in radio mode {:?}", radio_mode);
                     return Err(RadioError::ReceiveTimeout);
                 }
                 if IrqMask::HeaderValid.is_set_in(irq_flags) {
-                    debug!("HeaderValid in radio mode {}", radio_mode);
+                    debug!("HeaderValid in radio mode {:?}", radio_mode);
                     return Ok(Some(IrqState::PreambleReceived));
                 }
             }
             RadioMode::ChannelActivityDetection => {
                 if (irq_flags & IrqMask::CADDone.value()) == IrqMask::CADDone.value() {
-                    debug!("CADDone in radio mode {}", radio_mode);
+                    debug!("CADDone in radio mode {:?}", radio_mode);
                     // TODO: don't like how we mutate the cad_activity_detected parameter
                     if cad_activity_detected.is_some() {
                         // Check if the CAD (Channel Activity Detection) Activity Detected flag is set in irq_flags and then update the reference
@@ -525,7 +537,7 @@ where
                 }
             }
             RadioMode::Sleep | RadioMode::Standby => {
-                defmt::warn!("IRQ during sleep/standby?");
+                warn!("IRQ during sleep/standby?");
             }
             RadioMode::FrequencySynthesis => todo!(),
             RadioMode::Receive(RxMode::DutyCycle(_)) => todo!(),

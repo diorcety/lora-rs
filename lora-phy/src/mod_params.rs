@@ -2,7 +2,8 @@ pub use lora_modulation::{Bandwidth, CodingRate, SpreadingFactor};
 
 /// Errors types reported during LoRa physical layer processing
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, defmt::Format, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, PartialEq)]
 #[allow(missing_docs)]
 pub enum RadioError {
     SPI,
@@ -30,7 +31,7 @@ pub enum RadioError {
 }
 
 /// Status for a received packet
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[allow(missing_docs)]
 pub struct PacketStatus {
     pub rssi: i16,
@@ -38,7 +39,8 @@ pub struct PacketStatus {
 }
 
 /// The state of the radio
-#[derive(Clone, Copy, defmt::Format, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RadioMode {
     /// Sleep mode
     Sleep,
@@ -61,7 +63,8 @@ impl From<RxMode> for RadioMode {
 }
 
 /// Listening mode for LoRaWAN packet detection/reception
-#[derive(Clone, Copy, defmt::Format, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RxMode {
     /// Single shot Rx Mode to listen until packet preamble is detected or RxTimeout occurs.
     /// The device will stay in RX Mode until a packet is received.
@@ -77,6 +80,8 @@ pub enum RxMode {
 }
 
 /// Modulation parameters for a send and/or receive communication channel
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ModulationParams {
     pub(crate) spreading_factor: SpreadingFactor,
     pub(crate) bandwidth: Bandwidth,
@@ -86,6 +91,8 @@ pub struct ModulationParams {
 }
 
 /// Packet parameters for a send or receive communication channel
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PacketParams {
     pub(crate) preamble_length: u16,  // number of LoRa symbols in the preamble
     pub(crate) implicit_header: bool, // if the header is explicit, it will be transmitted in the LoRa packet, but is not transmitted if the header is implicit (known fixed length)
@@ -105,7 +112,8 @@ impl PacketParams {
 }
 
 /// Receive duty cycle parameters
-#[derive(Clone, Copy, defmt::Format, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DutyCycleParams {
     /// receive interval
     pub rx_time: u32,

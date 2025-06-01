@@ -1,6 +1,18 @@
 mod radio_kind_params;
 
-use defmt::debug;
+#[cfg(feature = "defmt")]
+use defmt::{debug, warn};
+#[cfg(feature = "log")]
+use log::{debug, warn};
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! debug {
+    ($($arg:tt)*) => {};
+}
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! warn {
+    ($($arg:tt)*) => {};
+}
+
 use embedded_hal_async::delay::DelayNs;
 use embedded_hal_async::spi::*;
 pub use radio_kind_params::TcxoCtrlVoltage;
@@ -481,7 +493,7 @@ where
         let bandwidth_val = bandwidth_value(mdltn_params.bandwidth)?;
         let coding_rate_val = coding_rate_value(mdltn_params.coding_rate)?;
         debug!(
-            "sf = {}, bw = {}, cr = {}",
+            "sf = {:?}, bw = {:?}, cr = {:?}",
             spreading_factor_val, bandwidth_val, coding_rate_val
         );
         let op_code_and_mod_params = [
@@ -593,7 +605,7 @@ where
     }
 
     async fn set_channel(&mut self, frequency_in_hz: u32) -> Result<(), RadioError> {
-        debug!("channel = {}", frequency_in_hz);
+        debug!("channel = {:?}", frequency_in_hz);
         let freq_in_pll_steps = Self::convert_freq_in_hz_to_pll_step(frequency_in_hz);
         let op_code_and_pll_steps = [
             OpCode::SetRFFrequency.value(),
@@ -855,24 +867,24 @@ where
 
         if OpStatusErrorMask::is_error(read_status) {
             debug!(
-                "process_irq read status error = 0x{:x} in radio mode {}",
+                "process_irq read status error = 0x{:x} in radio mode {:?}",
                 read_status, radio_mode
             );
         }
 
         debug!(
-            "process_irq satisfied: irq_flags = 0x{:x} in radio mode {}",
+            "process_irq satisfied: irq_flags = 0x{:x} in radio mode {:?}",
             irq_flags, radio_mode
         );
 
         if (irq_flags & IrqMask::HeaderValid.value()) == IrqMask::HeaderValid.value() {
-            debug!("HeaderValid in radio mode {}", radio_mode);
+            debug!("HeaderValid in radio mode {:?}", radio_mode);
         }
         if (irq_flags & IrqMask::PreambleDetected.value()) == IrqMask::PreambleDetected.value() {
-            debug!("PreambleDetected in radio mode {}", radio_mode);
+            debug!("PreambleDetected in radio mode {:?}", radio_mode);
         }
         if (irq_flags & IrqMask::SyncwordValid.value()) == IrqMask::SyncwordValid.value() {
-            debug!("SyncwordValid in radio mode {}", radio_mode);
+            debug!("SyncwordValid in radio mode {:?}", radio_mode);
         }
 
         match radio_mode {
@@ -886,13 +898,13 @@ where
             }
             RadioMode::Receive(rx_mode) => {
                 if (irq_flags & IrqMask::HeaderError.value()) == IrqMask::HeaderError.value() {
-                    debug!("HeaderError in radio mode {}", radio_mode);
+                    debug!("HeaderError in radio mode {:?}", radio_mode);
                 }
                 if (irq_flags & IrqMask::CRCError.value()) == IrqMask::CRCError.value() {
-                    debug!("CRCError in radio mode {}", radio_mode);
+                    debug!("CRCError in radio mode {:?}", radio_mode);
                 }
                 if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
-                    debug!("RxDone in radio mode {}", radio_mode);
+                    debug!("RxDone in radio mode {:?}", radio_mode);
                     if rx_mode != RxMode::Continuous {
                         // implicit header mode timeout behavior (see DS_SX1261-2_V1.2 datasheet chapter 15.3)
                         let register_and_clear = [
@@ -943,7 +955,7 @@ where
                 }
             }
             RadioMode::Sleep | RadioMode::Standby => {
-                defmt::warn!("IRQ during sleep/standby?");
+                warn!("IRQ during sleep/standby?");
             }
             RadioMode::FrequencySynthesis => todo!(),
         }

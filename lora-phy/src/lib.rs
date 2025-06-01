@@ -9,6 +9,15 @@
 /// Provides an implementation of the async LoRaWAN device trait.
 pub mod lorawan_radio;
 
+#[cfg(feature = "defmt")]
+use defmt::trace;
+#[cfg(feature = "log")]
+use log::trace;
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! trace {
+    ($($arg:tt)*) => {};
+}
+
 /// The read/write interface between an embedded framework/MCU combination and a LoRa chip
 pub(crate) mod interface;
 /// InterfaceVariant implementations using `embedded-hal`.
@@ -229,7 +238,7 @@ where
         mdltn_params: &ModulationParams,
         rx_pkt_params: &PacketParams,
     ) -> Result<(), RadioError> {
-        defmt::trace!("RX mode: {}", listen_mode);
+        trace!("RX mode: {:?}", listen_mode);
         self.prepare_modem(mdltn_params).await?;
 
         self.radio_kind.set_modulation_params(mdltn_params).await?;

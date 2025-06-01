@@ -1,4 +1,12 @@
+#[cfg(feature = "defmt")]
 use defmt::trace;
+#[cfg(feature = "log")]
+use log::trace;
+#[cfg(all(not(feature = "defmt"), not(feature = "log")))]
+macro_rules! trace {
+    ($($arg:tt)*) => {};
+}
+
 use embedded_hal_async::spi::{Operation, SpiDevice};
 
 use crate::mod_params::RadioError::{self, SPI};
@@ -7,6 +15,36 @@ use crate::mod_traits::InterfaceVariant;
 pub(crate) struct SpiInterface<SPI, IV> {
     pub(crate) spi: SPI,
     pub(crate) iv: IV,
+}
+
+pub struct HexSlice<'a>(pub &'a [u8]);
+
+#[cfg(feature = "defmt")]
+impl<'a> defmt::Format for HexSlice<'a> {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "[");
+        for (i, byte) in self.0.iter().enumerate() {
+            if i > 0 {
+                defmt::write!(f, ", ");
+            }
+            defmt::write!(f, "{:02x}", byte);
+        }
+        defmt::write!(f, "]");
+    }
+}
+
+#[cfg(feature = "log")]
+impl<'a> core::fmt::Display for HexSlice<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "[")?;
+        for (i, byte) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{:02x}", byte)?;
+        }
+        write!(f, "]")
+    }
 }
 
 impl<SPI, IV> SpiInterface<SPI, IV>
@@ -21,7 +59,7 @@ where
     // Write a buffer to the radio.
     pub async fn write(&mut self, write_buffer: &[u8], is_sleep_command: bool) -> Result<(), RadioError> {
         self.spi.write(write_buffer).await.map_err(|_| SPI)?;
-        trace!("write: {=[u8]:02x}", write_buffer);
+        trace!("write: {}", HexSlice(write_buffer));
 
         if !is_sleep_command {
             self.iv.wait_on_busy().await?;
@@ -39,7 +77,7 @@ where
     ) -> Result<(), RadioError> {
         let mut ops = [Operation::Write(write_buffer), Operation::Write(payload)];
         self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
-        trace!("write_buf: {=[u8]:02x} -> {=[u8]:02x}", write_buffer, payload);
+        trace!("write_buf: {} -> {}", HexSlice(write_buffer), HexSlice(payload));
 
         if !is_sleep_command {
             self.iv.wait_on_busy().await?;
@@ -59,10 +97,10 @@ where
         self.iv.wait_on_busy().await?;
 
         trace!(
-            "read: addr={=[u8]:02x}, len={}, data={=[u8]:02x}",
-            write_buffer,
+            "read: addr={}, len={}, data={}",
+            HexSlice(write_buffer),
             read_buffer.len(),
-            read_buffer
+            HexSlice(read_buffer)
         );
 
         Ok(())
@@ -84,11 +122,11 @@ where
         self.iv.wait_on_busy().await?;
 
         trace!(
-            "read: addr={=[u8]:02x}, len={}, status={:02x}, buf={=[u8]:02x}",
-            write_buffer,
+            "read: addr={}, len={}, status={:02x}, buf={}",
+            HexSlice(write_buffer),
             read_buffer.len(),
             status[0],
-            read_buffer
+            HexSlice(read_buffer)
         );
 
         Ok(status[0])
