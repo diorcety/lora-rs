@@ -1,4 +1,4 @@
-mod radio_kind_params;
+pub mod radio_kind_params;
 mod sx1272;
 pub use sx1272::Sx1272;
 mod sx1276;
@@ -26,24 +26,24 @@ use crate::mod_traits::IrqState;
 use crate::{InterfaceVariant, RadioKind, SpiInterface};
 
 // Syncwords for public and private networks
-const LORA_MAC_PUBLIC_SYNCWORD: u8 = 0x34; // corresponds to sx126x 0x3444
-const LORA_MAC_PRIVATE_SYNCWORD: u8 = 0x12; // corresponds to sx126x 0x1424
+pub const LORA_MAC_PUBLIC_SYNCWORD: u8 = 0x34; // corresponds to sx126x 0x3444
+pub const LORA_MAC_PRIVATE_SYNCWORD: u8 = 0x12; // corresponds to sx126x 0x1424
 
 // TCXO flag
-const TCXO_FOR_OSCILLATOR: u8 = 0x10u8;
+pub const TCXO_FOR_OSCILLATOR: u8 = 0x10u8;
 
 // Frequency synthesizer step for frequency calculation (Hz)
-const FREQUENCY_SYNTHESIZER_STEP: f64 = 61.03515625; // FXOSC (32 MHz) * 1000000 (Hz/MHz) / 524288 (2^19)
+pub const FREQUENCY_SYNTHESIZER_STEP: f64 = 61.03515625; // FXOSC (32 MHz) * 1000000 (Hz/MHz) / 524288 (2^19)
 
 // Limits for preamble detection window in single reception mode
-const SX127X_MIN_LORA_SYMB_NUM_TIMEOUT: u16 = 4;
-const SX127X_MAX_LORA_SYMB_NUM_TIMEOUT: u16 = 1023;
+pub const SX127X_MIN_LORA_SYMB_NUM_TIMEOUT: u16 = 4;
+pub const SX127X_MAX_LORA_SYMB_NUM_TIMEOUT: u16 = 1023;
 
 // Constant values need to compute the RSSI value
-const SX1272_RSSI_OFFSET: i16 = -139;
-const SX1276_RSSI_OFFSET_LF: i16 = -164;
-const SX1276_RSSI_OFFSET_HF: i16 = -157;
-const SX1276_RF_MID_BAND_THRESH: u32 = 525_000_000;
+pub const SX1272_RSSI_OFFSET: i16 = -139;
+pub const SX1276_RSSI_OFFSET_LF: i16 = -164;
+pub const SX1276_RSSI_OFFSET_HF: i16 = -157;
+pub const SX1276_RF_MID_BAND_THRESH: u32 = 525_000_000;
 
 /// Configuration for SX127x-based boards
 pub struct Config<C: Sx127xVariant> {
@@ -60,8 +60,8 @@ pub struct Config<C: Sx127xVariant> {
 
 /// Base for the RadioKind implementation for the LoRa chip kind and board type
 pub struct Sx127x<SPI, IV, C: Sx127xVariant + Sized> {
-    intf: SpiInterface<SPI, IV>,
-    config: Config<C>,
+    pub intf: SpiInterface<SPI, IV>,
+    pub config: Config<C>,
 }
 
 impl<SPI, IV, C> Sx127x<SPI, IV, C>

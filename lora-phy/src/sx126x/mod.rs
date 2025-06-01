@@ -1,4 +1,4 @@
-mod radio_kind_params;
+pub mod radio_kind_params;
 
 #[cfg(feature = "defmt")]
 use defmt::{debug, warn};
@@ -25,29 +25,29 @@ mod variant;
 pub use variant::*;
 
 // Syncwords for public and private networks
-const LORA_MAC_PUBLIC_SYNCWORD: u16 = 0x3444; // corresponds to sx127x 0x34
-const LORA_MAC_PRIVATE_SYNCWORD: u16 = 0x1424; // corresponds to sx127x 0x12
+pub const LORA_MAC_PUBLIC_SYNCWORD: u16 = 0x3444; // corresponds to sx127x 0x34
+pub const LORA_MAC_PRIVATE_SYNCWORD: u16 = 0x1424; // corresponds to sx127x 0x12
 
 // Maximum number of registers that can be added to the retention list
-const MAX_NUMBER_REGS_IN_RETENTION: u8 = 4;
+pub const MAX_NUMBER_REGS_IN_RETENTION: u8 = 4;
 
 // Internal frequency of the radio
-const SX126X_XTAL_FREQ: u32 = 32000000;
+pub const SX126X_XTAL_FREQ: u32 = 32000000;
 
 // Scaling factor used to perform fixed-point operations
-const SX126X_PLL_STEP_SHIFT_AMOUNT: u32 = 14;
+pub const SX126X_PLL_STEP_SHIFT_AMOUNT: u32 = 14;
 
 // PLL step - scaled with SX126X_PLL_STEP_SHIFT_AMOUNT
-const SX126X_PLL_STEP_SCALED: u32 = SX126X_XTAL_FREQ >> (25 - SX126X_PLL_STEP_SHIFT_AMOUNT);
+pub const SX126X_PLL_STEP_SCALED: u32 = SX126X_XTAL_FREQ >> (25 - SX126X_PLL_STEP_SHIFT_AMOUNT);
 
 // Maximum value for parameter symbNum
-const SX126X_MAX_LORA_SYMB_NUM_TIMEOUT: u8 = 248;
+pub const SX126X_MAX_LORA_SYMB_NUM_TIMEOUT: u8 = 248;
 
 // Time required for the TCXO to wakeup [ms].
-const BRD_TCXO_WAKEUP_TIME: u32 = 10;
+pub const BRD_TCXO_WAKEUP_TIME: u32 = 10;
 
 // SetRx timeout argument for enabling continuous mode
-const RX_CONTINUOUS_TIMEOUT: u32 = 0xffffff;
+pub const RX_CONTINUOUS_TIMEOUT: u32 = 0xffffff;
 
 /// Power amplifier selection
 #[repr(u8)]
@@ -72,8 +72,8 @@ pub struct Config<C: Sx126xVariant + Sized> {
 
 /// Base for the RadioKind implementation for the LoRa chip kind and board type
 pub struct Sx126x<SPI, IV, C: Sx126xVariant + Sized> {
-    intf: SpiInterface<SPI, IV>,
-    config: Config<C>,
+    pub intf: SpiInterface<SPI, IV>,
+    pub config: Config<C>,
 }
 
 impl<SPI, IV, C> Sx126x<SPI, IV, C>
@@ -89,7 +89,7 @@ where
     }
 
     // Utility functions
-    async fn add_register_to_retention_list(&mut self, register: Register) -> Result<(), RadioError> {
+    pub async fn add_register_to_retention_list(&mut self, register: Register) -> Result<(), RadioError> {
         let mut buffer = [0x00u8; (1 + (2 * MAX_NUMBER_REGS_IN_RETENTION)) as usize];
 
         // Read the address and registers already added to the list
@@ -130,13 +130,13 @@ where
         }
     }
 
-    async fn update_retention_list(&mut self) -> Result<(), RadioError> {
+    pub async fn update_retention_list(&mut self) -> Result<(), RadioError> {
         self.add_register_to_retention_list(Register::RxGain).await?;
         self.add_register_to_retention_list(Register::TxModulation).await
     }
 
     // Set the number of symbols the radio will wait to detect a reception
-    async fn set_lora_symbol_num_timeout(&mut self, symbol_num: u16) -> Result<(), RadioError> {
+    pub async fn set_lora_symbol_num_timeout(&mut self, symbol_num: u16) -> Result<(), RadioError> {
         let mut exp = 0u8;
         let mut mant = ((symbol_num.min(SX126X_MAX_LORA_SYMB_NUM_TIMEOUT.into()) + 1) >> 1) as u8;
         while mant > 31 {
@@ -161,7 +161,7 @@ where
         Ok(())
     }
 
-    async fn set_pa_config(&mut self, pa_duty_cycle: u8, hp_max: u8, device_sel: DeviceSel) -> Result<(), RadioError> {
+    pub async fn set_pa_config(&mut self, pa_duty_cycle: u8, hp_max: u8, device_sel: DeviceSel) -> Result<(), RadioError> {
         const PA_LUT_RESERVED: u8 = 0x01;
         let op_code_and_pa_config = [
             OpCode::SetPAConfig.value(),

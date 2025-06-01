@@ -12,9 +12,9 @@ use embedded_hal_async::spi::{Operation, SpiDevice};
 use crate::mod_params::RadioError::{self, SPI};
 use crate::mod_traits::InterfaceVariant;
 
-pub(crate) struct SpiInterface<SPI, IV> {
-    pub(crate) spi: SPI,
-    pub(crate) iv: IV,
+pub struct SpiInterface<SPI, IV> {
+    pub spi: SPI,
+    pub iv: IV,
 }
 
 pub struct HexSlice<'a>(pub &'a [u8]);
