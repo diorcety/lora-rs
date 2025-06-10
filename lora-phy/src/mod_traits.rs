@@ -54,7 +54,7 @@ pub trait RadioKind {
     /// Reset the loRa chip
     async fn reset(&mut self, delay: &mut impl DelayNs) -> Result<(), RadioError>;
     /// Ensure the LoRa chip is in the appropriate state to allow operation requests
-    async fn ensure_ready(&mut self, mode: RadioMode) -> Result<(), RadioError>;
+    async fn ensure_ready(&mut self, mode: &RadioMode) -> Result<(), RadioError>;
     /// Place the LoRa chip in standby mode
     async fn set_standby(&mut self) -> Result<(), RadioError>;
     /// Place the LoRa chip in power-saving mode
@@ -97,7 +97,7 @@ pub trait RadioKind {
     /// Perform a channel activity detection operation
     async fn do_cad(&mut self, mdltn_params: &ModulationParams) -> Result<(), RadioError>;
     /// Set the LoRa chip to provide notification of specific events based on radio state
-    async fn set_irq_params(&mut self, radio_mode: Option<RadioMode>) -> Result<(), RadioError>;
+    async fn set_irq_params(&mut self, radio_mode: Option<&RadioMode>) -> Result<(), RadioError>;
     /// Set the LoRa chip into the TxContinuousWave mode
     async fn set_tx_continuous_wave_mode(&mut self) -> Result<(), RadioError>;
 
@@ -106,7 +106,7 @@ pub trait RadioKind {
     /// Process LoRa radio IRQs
     async fn process_irq_event(
         &mut self,
-        radio_mode: RadioMode,
+        radio_mode: &RadioMode,
         cad_activity_detected: Option<&mut bool>,
         clear_interrupts: bool,
     ) -> Result<Option<IrqState>, RadioError>;

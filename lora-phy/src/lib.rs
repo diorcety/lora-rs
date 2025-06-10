@@ -79,7 +79,7 @@ where
 
     /// Process an IRQ event and return the new state of the radio
     pub async fn process_irq_event(&mut self) -> Result<Option<IrqState>, RadioError> {
-        self.radio_kind.process_irq_event(self.radio_mode, None, false).await
+        self.radio_kind.process_irq_event(&self.radio_mode, None, false).await
     }
 
     /// Create modulation parameters for a communication channel
@@ -137,7 +137,7 @@ where
     pub async fn init(&mut self) -> Result<(), RadioError> {
         self.cold_start = true;
         self.radio_kind.reset(&mut self.delay).await?;
-        self.radio_kind.ensure_ready(self.radio_mode).await?;
+        self.radio_kind.ensure_ready(&self.radio_mode).await?;
         self.radio_kind.set_standby().await?;
         self.radio_mode = RadioMode::Standby;
         self.do_cold_start().await
@@ -146,7 +146,7 @@ where
     async fn do_cold_start(&mut self) -> Result<(), RadioError> {
         self.radio_kind.init_lora(self.enable_public_network).await?;
         self.radio_kind.set_tx_power_and_ramp_time(0, None, false).await?;
-        self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        self.radio_kind.set_irq_params(Some(&self.radio_mode)).await?;
         self.cold_start = false;
         self.calibrate_image = true;
         Ok(())
@@ -160,7 +160,7 @@ where
     /// Place the LoRa physical layer in low power mode, specifying cold or warm start (if the Semtech chip supports it)
     pub async fn sleep(&mut self, warm_start_if_possible: bool) -> Result<(), RadioError> {
         if self.radio_mode != RadioMode::Sleep {
-            self.radio_kind.ensure_ready(self.radio_mode).await?;
+            self.radio_kind.ensure_ready(&self.radio_mode).await?;
             self.radio_kind
                 .set_sleep(warm_start_if_possible, &mut self.delay)
                 .await?;
@@ -186,7 +186,7 @@ where
         self.radio_kind
             .set_tx_power_and_ramp_time(output_power, Some(mdltn_params), true)
             .await?;
-        self.radio_kind.ensure_ready(self.radio_mode).await?;
+        self.radio_kind.ensure_ready(&self.radio_mode).await?;
         if self.radio_mode != RadioMode::Standby {
             self.radio_kind.set_standby().await?;
             self.radio_mode = RadioMode::Standby;
@@ -197,7 +197,7 @@ where
         self.radio_kind.set_channel(mdltn_params.frequency_in_hz).await?;
         self.radio_kind.set_payload(buffer).await?;
         self.radio_mode = RadioMode::Transmit;
-        self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        self.radio_kind.set_irq_params(Some(&self.radio_mode)).await?;
         Ok(())
     }
 
@@ -207,14 +207,14 @@ where
             self.radio_kind.do_tx().await?;
             loop {
                 self.wait_for_irq().await?;
-                match self.radio_kind.process_irq_event(self.radio_mode, None, true).await {
+                match self.radio_kind.process_irq_event(&self.radio_mode, None, true).await {
                     Ok(Some(IrqState::Done | IrqState::PreambleReceived)) => {
                         self.radio_mode = RadioMode::Standby;
                         return Ok(());
                     }
                     Ok(None) => continue,
                     Err(err) => {
-                        self.radio_kind.ensure_ready(self.radio_mode).await?;
+                        self.radio_kind.ensure_ready(&self.radio_mode).await?;
                         self.radio_kind.set_standby().await?;
                         self.radio_mode = RadioMode::Standby;
                         return Err(err);
@@ -245,7 +245,7 @@ where
         self.radio_kind.set_packet_params(rx_pkt_params).await?;
         self.radio_kind.set_channel(mdltn_params.frequency_in_hz).await?;
         self.radio_mode = listen_mode.into();
-        self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        self.radio_kind.set_irq_params(Some(&self.radio_mode)).await?;
         Ok(())
     }
 
@@ -259,7 +259,7 @@ where
             self.radio_kind.do_rx(listen_mode).await?;
             loop {
                 self.wait_for_irq().await?;
-                match self.radio_kind.process_irq_event(self.radio_mode, None, true).await {
+                match self.radio_kind.process_irq_event(&self.radio_mode, None, true).await {
                     Ok(Some(actual_state)) => match actual_state {
                         IrqState::PreambleReceived => continue,
                         IrqState::Done => {
@@ -272,7 +272,7 @@ where
                     Err(err) => {
                         // if in rx continuous mode, allow the caller to determine whether to keep receiving
                         if self.radio_mode != RadioMode::Receive(RxMode::Continuous) {
-                            self.radio_kind.ensure_ready(self.radio_mode).await?;
+                            self.radio_kind.ensure_ready(&self.radio_mode).await?;
                             self.radio_kind.set_standby().await?;
                             self.radio_mode = RadioMode::Standby;
                         }
@@ -292,7 +292,7 @@ where
         self.radio_kind.set_modulation_params(mdltn_params).await?;
         self.radio_kind.set_channel(mdltn_params.frequency_in_hz).await?;
         self.radio_mode = RadioMode::ChannelActivityDetection;
-        self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        self.radio_kind.set_irq_params(Some(&self.radio_mode)).await?;
         Ok(())
     }
 
@@ -304,12 +304,12 @@ where
             let mut cad_activity_detected = false;
             match self
                 .radio_kind
-                .process_irq_event(self.radio_mode, Some(&mut cad_activity_detected), true)
+                .process_irq_event(&self.radio_mode, Some(&mut cad_activity_detected), true)
                 .await
             {
                 Ok(Some(IrqState::Done)) => Ok(cad_activity_detected),
                 Err(err) => {
-                    self.radio_kind.ensure_ready(self.radio_mode).await?;
+                    self.radio_kind.ensure_ready(&self.radio_mode).await?;
                     self.radio_kind.set_standby().await?;
                     self.radio_mode = RadioMode::Standby;
                     Err(err)
@@ -342,19 +342,19 @@ where
             .set_tx_power_and_ramp_time(output_power, Some(mdltn_params), true)
             .await?;
 
-        self.radio_kind.ensure_ready(self.radio_mode).await?;
+        self.radio_kind.ensure_ready(&self.radio_mode).await?;
         if self.radio_mode != RadioMode::Standby {
             self.radio_kind.set_standby().await?;
             self.radio_mode = RadioMode::Standby;
         }
         self.radio_kind.set_channel(mdltn_params.frequency_in_hz).await?;
         self.radio_mode = RadioMode::Transmit;
-        self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        self.radio_kind.set_irq_params(Some(&self.radio_mode)).await?;
         self.radio_kind.set_tx_continuous_wave_mode().await
     }
 
     async fn prepare_modem(&mut self, mdltn_params: &ModulationParams) -> Result<(), RadioError> {
-        self.radio_kind.ensure_ready(self.radio_mode).await?;
+        self.radio_kind.ensure_ready(&self.radio_mode).await?;
         if self.radio_mode != RadioMode::Standby {
             self.radio_kind.set_standby().await?;
             self.radio_mode = RadioMode::Standby;

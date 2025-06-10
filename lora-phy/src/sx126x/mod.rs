@@ -328,7 +328,7 @@ where
     }
 
     // Wakeup the radio if it is in Sleep or ReceiveDutyCycle mode; otherwise, ensure it is not busy.
-    async fn ensure_ready(&mut self, mode: RadioMode) -> Result<(), RadioError> {
+    async fn ensure_ready(&mut self, mode: &RadioMode) -> Result<(), RadioError> {
         match mode {
             RadioMode::Sleep | RadioMode::Receive(RxMode::DutyCycle(_)) => {
                 let op_code_and_null = [OpCode::GetStatus.value(), 0x00u8];
@@ -792,7 +792,7 @@ where
     }
 
     // Set the IRQ mask and DIO masks
-    async fn set_irq_params(&mut self, radio_mode: Option<RadioMode>) -> Result<(), RadioError> {
+    async fn set_irq_params(&mut self, radio_mode: Option<&RadioMode>) -> Result<(), RadioError> {
         let mut irq_mask: u16 = IrqMask::None.value();
         let mut dio1_mask: u16 = IrqMask::None.value();
         let dio2_mask: u16 = IrqMask::None.value();
@@ -850,7 +850,7 @@ where
     /// mid-flow could cause radio lock up.
     async fn process_irq_event(
         &mut self,
-        radio_mode: RadioMode,
+        radio_mode: &RadioMode,
         cad_activity_detected: Option<&mut bool>,
         clear_interrupts: bool,
     ) -> Result<Option<IrqState>, RadioError> {
@@ -905,7 +905,7 @@ where
                 }
                 if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
                     debug!("RxDone in radio mode {:?}", radio_mode);
-                    if rx_mode != RxMode::Continuous {
+                    if rx_mode != &RxMode::Continuous {
                         // implicit header mode timeout behavior (see DS_SX1261-2_V1.2 datasheet chapter 15.3)
                         let register_and_clear = [
                             OpCode::WriteRegister.value(),

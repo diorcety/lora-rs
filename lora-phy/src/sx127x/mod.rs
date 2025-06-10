@@ -198,7 +198,7 @@ where
         Ok(())
     }
 
-    async fn ensure_ready(&mut self, _mode: RadioMode) -> Result<(), RadioError> {
+    async fn ensure_ready(&mut self, _mode: &RadioMode) -> Result<(), RadioError> {
         Ok(())
     }
 
@@ -419,7 +419,7 @@ where
     // Set the IRQ mask to disable unwanted interrupts,
     // enable interrupts on DIO pins (sx127x has multiple),
     // and allow interrupts.
-    async fn set_irq_params(&mut self, radio_mode: Option<RadioMode>) -> Result<(), RadioError> {
+    async fn set_irq_params(&mut self, radio_mode: Option<&RadioMode>) -> Result<(), RadioError> {
         match radio_mode {
             Some(RadioMode::Transmit) => {
                 self.write_register(
@@ -494,7 +494,7 @@ where
     /// mid-flow could cause radio lock up.
     async fn process_irq_event(
         &mut self,
-        radio_mode: RadioMode,
+        radio_mode: &RadioMode,
         cad_activity_detected: Option<&mut bool>,
         clear_interrupts: bool,
     ) -> Result<Option<IrqState>, RadioError> {
