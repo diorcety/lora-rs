@@ -104,10 +104,10 @@ pub trait RadioKind {
     /// Await for an IRQ event. This is droppable and thus safe to use in a select branch.
     async fn await_irq(&mut self) -> Result<(), RadioError>;
     /// Process LoRa radio IRQs
-    async fn process_irq_event(
-        &mut self,
-        radio_mode: &RadioMode,
-        cad_activity_detected: Option<&mut bool>,
+    async fn process_irq_event<'a>(
+        &'a mut self,
+        radio_mode: &'a RadioMode,
+        cad_activity_detected: Option<&'a mut bool>,
         clear_interrupts: bool,
     ) -> Result<Option<IrqState>, RadioError>;
 }

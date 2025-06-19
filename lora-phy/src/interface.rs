@@ -57,78 +57,102 @@ where
     }
 
     // Write a buffer to the radio.
-    pub async fn write(&mut self, write_buffer: &[u8], is_sleep_command: bool) -> Result<(), RadioError> {
-        self.spi.write(write_buffer).await.map_err(|_| SPI)?;
-        trace!("write: {}", HexSlice(write_buffer));
+    pub fn write<'a>(
+        &'a mut self,
+        write_buffer: &'a [u8],
+        is_sleep_command: bool,
+    ) -> impl core::future::Future<Output = Result<(), RadioError>> + 'a {
+        #[inline(never)]
+        async move {
+            self.spi.write(write_buffer).await.map_err(|_| SPI)?;
+            trace!("write: {}", HexSlice(write_buffer));
 
-        if !is_sleep_command {
-            self.iv.wait_on_busy().await?;
+            if !is_sleep_command {
+                self.iv.wait_on_busy().await?;
+            }
+
+            Ok(())
         }
-
-        Ok(())
     }
 
     // Write
-    pub async fn write_with_payload(
-        &mut self,
-        write_buffer: &[u8],
-        payload: &[u8],
+    pub fn write_with_payload<'a>(
+        &'a mut self,
+        write_buffer: &'a [u8],
+        payload: &'a [u8],
         is_sleep_command: bool,
-    ) -> Result<(), RadioError> {
-        let mut ops = [Operation::Write(write_buffer), Operation::Write(payload)];
-        self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
-        trace!("write_buf: {} -> {}", HexSlice(write_buffer), HexSlice(payload));
+    ) -> impl core::future::Future<Output = Result<(), RadioError>> + 'a {
+        #[inline(never)]
+        async move {
+            let mut ops = [Operation::Write(write_buffer), Operation::Write(payload)];
+            self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+            trace!("write_buf: {} -> {}", HexSlice(write_buffer), HexSlice(payload));
 
-        if !is_sleep_command {
-            self.iv.wait_on_busy().await?;
+            if !is_sleep_command {
+                self.iv.wait_on_busy().await?;
+            }
+
+            Ok(())
         }
-
-        Ok(())
     }
 
     // Request a read, filling the provided buffer.
-    pub async fn read(&mut self, write_buffer: &[u8], read_buffer: &mut [u8]) -> Result<(), RadioError> {
-        {
-            let mut ops = [Operation::Write(write_buffer), Operation::Read(read_buffer)];
+    pub fn read<'a>(
+        &'a mut self,
+        write_buffer: &'a [u8],
+        read_buffer: &'a mut [u8],
+    ) -> impl core::future::Future<Output = Result<(), RadioError>> + 'a {
+        #[inline(never)]
+        async move {
+            {
+                let mut ops = [Operation::Write(write_buffer), Operation::Read(read_buffer)];
 
-            self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+                self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+            }
+
+            self.iv.wait_on_busy().await?;
+
+            trace!(
+                "read: addr={}, len={}, data={}",
+                HexSlice(write_buffer),
+                read_buffer.len(),
+                HexSlice(read_buffer)
+            );
+
+            Ok(())
         }
-
-        self.iv.wait_on_busy().await?;
-
-        trace!(
-            "read: addr={}, len={}, data={}",
-            HexSlice(write_buffer),
-            read_buffer.len(),
-            HexSlice(read_buffer)
-        );
-
-        Ok(())
     }
 
     // Request a read with status, filling the provided buffer and returning the status.
-    pub async fn read_with_status(&mut self, write_buffer: &[u8], read_buffer: &mut [u8]) -> Result<u8, RadioError> {
-        let mut status = [0u8];
-        {
-            let mut ops = [
-                Operation::Write(write_buffer),
-                Operation::Read(&mut status),
-                Operation::Read(read_buffer),
-            ];
+    pub fn read_with_status<'a>(
+        &'a mut self,
+        write_buffer: &'a [u8],
+        read_buffer: &'a mut [u8],
+    ) -> impl core::future::Future<Output = Result<u8, RadioError>> + 'a {
+        #[inline(never)]
+        async move {
+            let mut status = [0u8];
+            {
+                let mut ops = [
+                    Operation::Write(write_buffer),
+                    Operation::Read(&mut status),
+                    Operation::Read(read_buffer),
+                ];
 
-            self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+                self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+            }
+
+            self.iv.wait_on_busy().await?;
+
+            trace!(
+                "read: addr={}, len={}, status={:02x}, buf={}",
+                HexSlice(write_buffer),
+                read_buffer.len(),
+                status[0],
+                HexSlice(read_buffer)
+            );
+
+            Ok(status[0])
         }
-
-        self.iv.wait_on_busy().await?;
-
-        trace!(
-            "read: addr={}, len={}, status={:02x}, buf={}",
-            HexSlice(write_buffer),
-            read_buffer.len(),
-            status[0],
-            HexSlice(read_buffer)
-        );
-
-        Ok(status[0])
     }
 }

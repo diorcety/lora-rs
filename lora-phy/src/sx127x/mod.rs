@@ -492,59 +492,62 @@ where
     ///
     /// NB! Do not await this future in a select branch as interrupting it
     /// mid-flow could cause radio lock up.
-    async fn process_irq_event(
-        &mut self,
-        radio_mode: &RadioMode,
-        cad_activity_detected: Option<&mut bool>,
+    fn process_irq_event<'a>(
+        &'a mut self,
+        radio_mode: &'a RadioMode,
+        cad_activity_detected: Option<&'a mut bool>,
         clear_interrupts: bool,
-    ) -> Result<Option<IrqState>, RadioError> {
-        let irq_flags = self.read_register(Register::RegIrqFlags).await?;
-        if clear_interrupts {
-            self.write_register(Register::RegIrqFlags, 0xffu8).await?; // clear all interrupts
-        }
+    ) -> impl core::future::Future<Output = Result<Option<IrqState>, RadioError>> + 'a {
+        #[inline(never)]
+        async move {
+            let irq_flags = self.read_register(Register::RegIrqFlags).await?;
+            if clear_interrupts {
+                self.write_register(Register::RegIrqFlags, 0xffu8).await?; // clear all interrupts
+            }
 
-        match radio_mode {
-            RadioMode::Transmit => {
-                if (irq_flags & IrqMask::TxDone.value()) == IrqMask::TxDone.value() {
-                    debug!("TxDone in radio mode {:?}", radio_mode);
-                    return Ok(Some(IrqState::Done));
-                }
-            }
-            RadioMode::Receive(RxMode::Continuous) | RadioMode::Receive(RxMode::Single(_)) => {
-                if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
-                    debug!("RxDone in radio mode {:?}", radio_mode);
-                    return Ok(Some(IrqState::Done));
-                }
-                if (irq_flags & IrqMask::RxTimeout.value()) == IrqMask::RxTimeout.value() {
-                    debug!("RxTimeout in radio mode {:?}", radio_mode);
-                    return Err(RadioError::ReceiveTimeout);
-                }
-                if IrqMask::HeaderValid.is_set_in(irq_flags) {
-                    debug!("HeaderValid in radio mode {:?}", radio_mode);
-                    return Ok(Some(IrqState::PreambleReceived));
-                }
-            }
-            RadioMode::ChannelActivityDetection => {
-                if (irq_flags & IrqMask::CADDone.value()) == IrqMask::CADDone.value() {
-                    debug!("CADDone in radio mode {:?}", radio_mode);
-                    // TODO: don't like how we mutate the cad_activity_detected parameter
-                    if cad_activity_detected.is_some() {
-                        // Check if the CAD (Channel Activity Detection) Activity Detected flag is set in irq_flags and then update the reference
-                        *(cad_activity_detected.unwrap()) =
-                            (irq_flags & IrqMask::CADActivityDetected.value()) == IrqMask::CADActivityDetected.value();
+            match radio_mode {
+                RadioMode::Transmit => {
+                    if (irq_flags & IrqMask::TxDone.value()) == IrqMask::TxDone.value() {
+                        debug!("TxDone in radio mode {:?}", radio_mode);
+                        return Ok(Some(IrqState::Done));
                     }
-                    return Ok(Some(IrqState::Done));
                 }
+                RadioMode::Receive(RxMode::Continuous) | RadioMode::Receive(RxMode::Single(_)) => {
+                    if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
+                        debug!("RxDone in radio mode {:?}", radio_mode);
+                        return Ok(Some(IrqState::Done));
+                    }
+                    if (irq_flags & IrqMask::RxTimeout.value()) == IrqMask::RxTimeout.value() {
+                        debug!("RxTimeout in radio mode {:?}", radio_mode);
+                        return Err(RadioError::ReceiveTimeout);
+                    }
+                    if IrqMask::HeaderValid.is_set_in(irq_flags) {
+                        debug!("HeaderValid in radio mode {:?}", radio_mode);
+                        return Ok(Some(IrqState::PreambleReceived));
+                    }
+                }
+                RadioMode::ChannelActivityDetection => {
+                    if (irq_flags & IrqMask::CADDone.value()) == IrqMask::CADDone.value() {
+                        debug!("CADDone in radio mode {:?}", radio_mode);
+                        // TODO: don't like how we mutate the cad_activity_detected parameter
+                        if cad_activity_detected.is_some() {
+                            // Check if the CAD (Channel Activity Detection) Activity Detected flag is set in irq_flags and then update the reference
+                            *(cad_activity_detected.unwrap()) = (irq_flags & IrqMask::CADActivityDetected.value())
+                                == IrqMask::CADActivityDetected.value();
+                        }
+                        return Ok(Some(IrqState::Done));
+                    }
+                }
+                RadioMode::Sleep | RadioMode::Standby => {
+                    warn!("IRQ during sleep/standby?");
+                }
+                RadioMode::FrequencySynthesis => todo!(),
+                RadioMode::Receive(RxMode::DutyCycle(_)) => todo!(),
             }
-            RadioMode::Sleep | RadioMode::Standby => {
-                warn!("IRQ during sleep/standby?");
-            }
-            RadioMode::FrequencySynthesis => todo!(),
-            RadioMode::Receive(RxMode::DutyCycle(_)) => todo!(),
-        }
 
-        // If no specific IRQ condition is met, return None
-        Ok(None)
+            // If no specific IRQ condition is met, return None
+            Ok(None)
+        }
     }
     /// Set the LoRa chip into the TxContinuousWave mode
     async fn set_tx_continuous_wave_mode(&mut self) -> Result<(), RadioError> {
