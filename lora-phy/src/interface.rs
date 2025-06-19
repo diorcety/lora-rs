@@ -23,7 +23,7 @@ where
         write_buffer: &'a [u8],
         is_sleep_command: bool,
     ) -> impl core::future::Future<Output = Result<(), RadioError>> + 'a {
-        //#[inline(never)]
+        #[inline(never)]
         async move {
             self.spi.write(write_buffer).await.map_err(|_| SPI)?;
             trace!("write: {=[u8]:02x}", write_buffer);
