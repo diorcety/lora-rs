@@ -47,4 +47,7 @@ embedded-hal-async = { version = "1.0.0" }
 embedded-hal-bus = { version = "0.2.0", features = ["async"] }
 
 [profile.release]
-debug = 2
+opt-level = "s"
+codegen-units = 1
+debug = true
+lto = true
