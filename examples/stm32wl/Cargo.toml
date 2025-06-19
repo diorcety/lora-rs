@@ -4,10 +4,23 @@ name = "lora-stm32wl-examples"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 
+[features]
+defmt = [
+    "embassy-stm32/defmt",
+    "embassy-futures/defmt",
+    "embassy-executor/defmt",
+    "embassy-time/defmt",
+    "embassy-time/defmt-timestamp-uptime",
+    "embassy-sync/defmt",
+    "dep:defmt",
+    "defmt-rtt",
+    "panic-probe/print-defmt",
+    "lora-phy/defmt-03",
+]
+
 [dependencies]
 # Change stm32wle5jc to your chip name, if necessary. Also update .cargo/config.toml
 embassy-stm32 = { version = "0.2.0", features = [
-    "defmt",
     "stm32wle5jc",
     "time-driver-any",
     "memory-x",
@@ -18,24 +31,21 @@ embassy-stm32 = { version = "0.2.0", features = [
 embassy-executor = { version = "0.7.0", features = [
     "arch-cortex-m",
     "executor-thread",
-    "defmt",
 ] }
 embassy-time = { version = "0.4.0", features = [
-    "defmt",
-    "defmt-timestamp-uptime",
 ] }
-embassy-sync = { version = "0.6", features = ["defmt"] }
-embassy-futures = { version = "0", features = ["defmt"] }
+embassy-sync = { version = "0.6", features = [] }
+embassy-futures = { version = "0", features = [] }
 
-lora-phy = { path = "../../lora-phy", features = ["lorawan-radio", "defmt-03"] }
+lora-phy = { path = "../../lora-phy", features = ["lorawan-radio"] }
 lorawan-device = { path = "../../lorawan-device", features = [
     "embassy-time",
-    "defmt-03",
 ] }
 
-defmt = "0.3"
-defmt-rtt = "0.4"
-panic-probe = { version = "0.3", features = ["print-defmt"] }
+defmt = {version = "0.3", optional = true}
+defmt-rtt = {version = "0.4", optional = true}
+panic-probe = { version = "0.3", features = [] }
+panic-halt = "1.0"
 
 cortex-m = { version = "0.7.6", features = [
     "inline-asm",

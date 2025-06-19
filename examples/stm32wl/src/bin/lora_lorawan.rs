@@ -6,7 +6,17 @@
 #[path = "../iv.rs"]
 mod iv;
 
+#[cfg(feature = "defmt")]
 use defmt::info;
+
+#[cfg(not(feature = "defmt"))]
+#[macro_export]
+macro_rules! info {
+    ($s:literal $(, $x:expr)* $(,)?) => {
+        ()
+    };
+}
+
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Pin, Speed};
 use embassy_stm32::rng::{self, Rng};
@@ -19,7 +29,12 @@ use lora_phy::sx126x::{self, Stm32wl, Sx126x, TcxoCtrlVoltage};
 use lora_phy::LoRa;
 use lorawan_device::async_device::{region, Device, EmbassyTimer, JoinMode};
 use lorawan_device::{AppEui, AppKey, DevEui};
+
+#[cfg(feature = "defmt")]
 use {defmt_rtt as _, panic_probe as _};
+
+#[cfg(not(feature = "defmt"))]
+use panic_halt as _;
 
 use self::iv::{InterruptHandler, Stm32wlInterfaceVariant, SubghzSpiDevice};
 
@@ -74,7 +89,7 @@ async fn main(_spawner: Spawner) {
     let region: region::Configuration = region::Configuration::new(LORAWAN_REGION);
     let mut device: Device<_, _, _> = Device::new(region, radio, EmbassyTimer::new(), Rng::new(p.RNG, Irqs));
 
-    defmt::info!("Joining LoRaWAN network");
+    info!("Joining LoRaWAN network");
 
     // TODO: Adjust the EUI and Keys according to your network credentials
     let resp = device

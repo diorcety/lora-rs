@@ -6,7 +6,16 @@
 #[path = "../iv.rs"]
 mod iv;
 
+#[cfg(feature = "defmt")]
 use defmt::info;
+
+#[cfg(not(feature = "defmt"))]
+#[macro_export]
+macro_rules! info {
+    ($s:literal $(, $x:expr)* $(,)?) => {
+        ()
+    };
+}
 
 use embassy_executor::Spawner;
 use embassy_futures::select::{select, Either};
@@ -29,7 +38,12 @@ use lora_phy::LoRa;
 use lorawan_device::async_device::{Device, EmbassyTimer, JoinMode, JoinResponse, SendResponse};
 use lorawan_device::region::{Subband, US915};
 use lorawan_device::{AppEui, AppKey, DevEui};
+
+#[cfg(feature = "defmt")]
 use {defmt_rtt as _, panic_probe as _};
+
+#[cfg(not(feature = "defmt"))]
+use panic_halt as _;
 
 use self::iv::{InterruptHandler, Stm32wlInterfaceVariant, SubghzSpiDevice};
 
@@ -166,7 +180,7 @@ async fn lora_task(
     }
 }
 
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 enum ButtonState {
     Pressed,
     Released,

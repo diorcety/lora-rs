@@ -6,7 +6,17 @@
 #[path = "../iv.rs"]
 mod iv;
 
+#[cfg(feature = "defmt")]
 use defmt::info;
+
+#[cfg(not(feature = "defmt"))]
+#[macro_export]
+macro_rules! info {
+    ($s:literal $(, $x:expr)* $(,)?) => {
+        ()
+    };
+}
+
 use embassy_executor::Spawner;
 use embassy_stm32::bind_interrupts;
 use embassy_stm32::gpio::{Level, Output, Pin, Speed};
@@ -16,7 +26,12 @@ use embassy_time::Delay;
 use lora_phy::sx126x::{Stm32wl, Sx126x, TcxoCtrlVoltage};
 use lora_phy::LoRa;
 use lora_phy::{mod_params::*, sx126x};
+
+#[cfg(feature = "defmt")]
 use {defmt_rtt as _, panic_probe as _};
+
+#[cfg(not(feature = "defmt"))]
+use panic_halt as _;
 
 use self::iv::{InterruptHandler, Stm32wlInterfaceVariant, SubghzSpiDevice};
 
